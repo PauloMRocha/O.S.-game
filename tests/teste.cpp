@@ -8,11 +8,13 @@
 #define DOWN 1
 #define LEFT 2
 #define RIGHT 3
-
+#define PLAYER_COLOR 2
+#define WALL_COLOR 1
 // global
 int ch, op = 0;
 int x = 15, y = 7;
 int directions[4] = {0,1,2,3};
+
 
 void rand_dir(){
   int values[4] = {0};
@@ -91,7 +93,7 @@ void delete_dir(int x, int y){
 void print_map(){
   clear();
   move(0,0);
-  attron(COLOR_PAIR(1));
+  attron(COLOR_PAIR(WALL_COLOR));
   for(int i = 0; i < LAR+2; i++) addch('#');
 
   for(int i = 1; i <= ALT; i++){
@@ -143,16 +145,21 @@ int main (void) {
   initscr();   /* Start curses mode     */
   //COLORS
   start_color();
-  init_pair(2, COLOR_GREEN, COLOR_BLACK);
-  init_pair(1, COLOR_BLACK, COLOR_YELLOW);
+  //        id            font color   bg color
+  init_pair(PLAYER_COLOR, COLOR_GREEN, COLOR_BLACK);//player
+  init_pair(WALL_COLOR, COLOR_YELLOW, COLOR_YELLOW);//wall
+
+  //stops buffer
   cbreak();
-  printw("Press any key to start\n"); /* Print Hello World    */
-  refresh();                 /* Print it on to the real screen */
+  printw("Press any key to start\n"); /* Print init message   */
+  refresh();
   getch();
   curs_set(0);
   noecho();
   print_map();
   mov_player(' ');
+
+  //activate key code
   keypad(stdscr, TRUE);
 
 
