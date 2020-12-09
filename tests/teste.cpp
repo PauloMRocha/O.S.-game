@@ -113,16 +113,16 @@ void mov_player (int dir) {
   delete_dir(y, x);
   mvaddch(y, x, ' '); //erase last position;
 
-  if(dir == directions[0]){
+  if(dir == directions[0]){//DOWN
     if (y > 1)
       y--;
-  }else if(dir == directions[1]){
+  }else if(dir == directions[1]){//UP
     if(y < ALT)
       y++;
-  }else if(dir == directions[2]){
+  }else if(dir == directions[2]){//LEFT
     if(x > 1)
       x--;
-  }else if(dir == directions[3]){
+  }else if(dir == directions[3]){//RIGHT
     if(x < LAR)
       x++;
   }
