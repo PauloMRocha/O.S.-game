@@ -1,2 +1,2 @@
 all:
-	g++ teste.cpp -Wall -g -lncursesw -o game
+	g++ testthread.cpp -Wall -lpthread -g -lncursesw -o game
