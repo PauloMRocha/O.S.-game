@@ -161,27 +161,36 @@ void mov_player(int dir) {
 }
 
 void mov_enemy(){
-  //int dir_e = rand()%4;
-  //mvaddch(e_coord[0].second, e_coord[0].first, ' '); //erase last position;
-  e_coord[0].second ++;
-  // if(dir_e == 0){//DOWN
-  //   if (e_coord[0].second > 1)
-  //     e_coord[0].second--;
-  // }else if(dir_e == 1){//UP
-  //   if(e_coord[0].second < ALT)
-  //     e_coord[0].second++;
-  // }else if(dir_e == 2){//LEFT
-  //   if(e_coord[0].first > 1)
-  //     e_coord[0].first--;
-  // }else if(dir_e == 3){//RIGHT
-  //   if(e_coord[0].first < LAR)
-  //     e_coord[0].first++;
-  // }
+
+  srand(time(NULL));
+  int dir_e = rand()%4;
+
+  sem_wait(&screen);
+
+  mvaddch(e_coord[0].second, e_coord[0].first, ' '); //erase last position;
+  //e_coord[0].second ++;
+  if(dir_e == 0){//DOWN
+    if (e_coord[0].second > 1)
+      e_coord[0].second--;
+    }else if(dir_e == 1){//UP
+     if(e_coord[0].second < ALT)
+        e_coord[0].second++;
+   }else if(dir_e == 2){//LEFT
+     if(e_coord[0].first > 1)
+       e_coord[0].first--;
+   }else if(dir_e == 3){//RIGHT
+     if(e_coord[0].first < LAR)
+       e_coord[0].first++;
+  }
+
+  
 
   attron(COLOR_PAIR(ENEMY_COLOR));
   mvaddstr(e_coord[0].second, e_coord[0].first, "☫");
   attroff(COLOR_PAIR(ENEMY_COLOR));
   refresh();
+
+  sem_post(&screen);
 }
 
 void* player_thread(void* var){
@@ -286,18 +295,18 @@ int main (void) {
 
   pthread_t timer;
   pthread_t player_t;
-  //pthread_t enemy_t;
+  pthread_t enemy_t;
   void *status_timer;
   void *status_player;
-  //void *status_enemy;
+  void *status_enemy;
 
 
 
   pthread_create(&timer, NULL, timer_thread, NULL);
   pthread_create(&player_t, NULL, player_thread, NULL);
-  //pthread_create(&enemy_t, NULL, enemy_thread, NULL);
+  pthread_create(&enemy_t, NULL, enemy_thread, NULL);
   pthread_join(timer, &status_timer);
-  //pthread_join(enemy_t, &status_enemy);
+  pthread_join(enemy_t, &status_enemy);
   pthread_join(player_t, &status_player);
 
   sem_destroy(&screen);
