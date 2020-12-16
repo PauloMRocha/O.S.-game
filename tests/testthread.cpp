@@ -6,8 +6,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <bits/stdc++.h>
-#define LAR 30
-#define ALT 15
+#define WIDHT 30
+#define HEIGHT 15
 #define UP 0
 #define DOWN 1
 #define LEFT 2
@@ -16,6 +16,7 @@
 #define ENEMY_COLOR 2
 #define PLAYER_COLOR 3
 #define TIMER_COLOR 4
+#define N_ENEMIES 4
 
 using namespace std;
 
@@ -27,6 +28,14 @@ pair<int,int> p_coord;
 vector<pair<int,int>> e_coord;
 
 sem_t screen;
+
+void game_over(){
+  stop = 0;
+  clear();
+  printw("\n\n\n\n \t   GAME OVER");
+  refresh();
+}
+
 
 void rand_dir(){
   int values[4] = {0};
@@ -70,7 +79,7 @@ void print_dir(int x, int y){
     print_arrow((x-1), y, directions[0]);
   }
   //down side
-  if((x+1) <= ALT){
+  if((x+1) <= HEIGHT){
     print_arrow((x+1), y, directions[1]);
   }
   //up left
@@ -78,7 +87,7 @@ void print_dir(int x, int y){
     print_arrow(x, (y-1), directions[2]);
   }
   //down side
-  if((y+1) <= LAR){
+  if((y+1) <= WIDHT){
     print_arrow(x, (y+1), directions[3]);
   }
 }
@@ -89,7 +98,7 @@ void delete_dir(int x, int y){
     mvaddch((x-1), y, ' ');
   }
   //down side
-  if((x+1) <= ALT){
+  if((x+1) <= HEIGHT){
     mvaddch((x+1), y, ' ');
   }
   //up left
@@ -97,7 +106,7 @@ void delete_dir(int x, int y){
     mvaddch(x, (y-1), ' ');
   }
   //down side
-  if((y+1) <= LAR){
+  if((y+1) <= WIDHT){
     mvaddch(x, (y+1), ' ');
   }
 }
@@ -106,24 +115,22 @@ void print_map(){
   clear();
   move(0,0);
   attron(COLOR_PAIR(WALL_COLOR));
-  for(int i = 0; i < LAR+2; i++) addch('#');
+  for(int i = 0; i < WIDHT+2; i++) addch('#');
 
-  for(int i = 1; i <= ALT; i++){
+  for(int i = 1; i <= HEIGHT; i++){
     mvaddch(i, 0, '#');
-    mvaddch(i, LAR+1, '#');
+    mvaddch(i, WIDHT+1, '#');
   }
 
-  move(ALT+1, 0);
+  move(HEIGHT+1, 0);
 
-  for(int i = 0; i < LAR+2; i++) addch('#');
+  for(int i = 0; i < WIDHT+2; i++) addch('#');
   attroff(COLOR_PAIR(WALL_COLOR));
   refresh();
   return;
 }
 
 void mov_player(int dir) {
-  //delete_dir(p_coord.second, p_coord.first);
-  //mvaddch(p_coord.second, p_coord.first, ' '); //erase last position;
 
   pair<int,int> past_coord;
   past_coord.first = p_coord.first;past_coord.second=p_coord.second;
@@ -132,14 +139,20 @@ void mov_player(int dir) {
     if (p_coord.second > 1)
       p_coord.second--;
   }else if(dir == directions[1]){//UP
-    if(p_coord.second < ALT)
+    if(p_coord.second < HEIGHT)
       p_coord.second++;
   }else if(dir == directions[2]){//LEFT
     if(p_coord.first > 1)
       p_coord.first--;
   }else if(dir == directions[3]){//RIGHT
-    if(p_coord.first < LAR)
+    if(p_coord.first < WIDHT)
       p_coord.first++;
+  }
+
+  for (int i = 0; i < (int)e_coord.size(); ++i){
+    if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
+      game_over();
+    }
   }
 //☬◈☫
 
@@ -163,39 +176,63 @@ void mov_player(int dir) {
 void mov_enemy(){
 
   srand(time(NULL));
-  int dir_e = rand()%4;
+  int dir_e = 0;
 
-  sem_wait(&screen);
+  for (int i = 0; i < (int)e_coord.size(); ++i){
+    dir_e = rand()%2;
+    sem_wait(&screen);
+    mvaddch(e_coord[i].second, e_coord[i].first, ' '); //erase last position;
+    
+    if (dir_e==i){
+      if (p_coord.second < e_coord[i].second) {
+        e_coord[i].second--;
+      }else{
+        e_coord[i].second++;
+      }
+    }else{
+      if (p_coord.first < e_coord[i].first) {
+        e_coord[i].first--;
+      }else{
+        e_coord[i].first++;
+      }
+    }
 
-  mvaddch(e_coord[0].second, e_coord[0].first, ' '); //erase last position;
-  //e_coord[0].second ++;
+    attron(COLOR_PAIR(ENEMY_COLOR));
+    mvaddstr(e_coord[i].second, e_coord[i].first, "☫");
+    attroff(COLOR_PAIR(ENEMY_COLOR));
+    refresh();
+
+    sem_post(&screen);    
+  }
+
+  for (int i = 0; i < (int)e_coord.size(); ++i){
+    if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
+      game_over();
+    }
+  }
+
+  /*
   if(dir_e == 0){//DOWN
     if (e_coord[0].second > 1)
       e_coord[0].second--;
     }else if(dir_e == 1){//UP
-     if(e_coord[0].second < ALT)
+     if(e_coord[0].second < HEIGHT)
         e_coord[0].second++;
    }else if(dir_e == 2){//LEFT
      if(e_coord[0].first > 1)
        e_coord[0].first--;
    }else if(dir_e == 3){//RIGHT
-     if(e_coord[0].first < LAR)
+     if(e_coord[0].first < WIDHT)
        e_coord[0].first++;
-  }
-
-  
-
-  attron(COLOR_PAIR(ENEMY_COLOR));
-  mvaddstr(e_coord[0].second, e_coord[0].first, "☫");
-  attroff(COLOR_PAIR(ENEMY_COLOR));
-  refresh();
-
-  sem_post(&screen);
+  }if p(_coord.first  == e_coord[i].first&& p_coord.second == e_coord[i]
+.second){
+  game_over();
+}  */
 }
 
 void* player_thread(void* var){
 
-  while(op == 0) {
+  while(op == 0 && stop != 0) {
     ch = getch();
 
     switch(ch) {
@@ -250,11 +287,14 @@ void* timer_thread(void* var){
 
 void* enemy_thread(void* var){
   pair<int,int> ep;
-  ep.first = 5; ep.second = 8;
-  e_coord.push_back(ep);
+  for (int i=0; i < N_ENEMIES; ++i){
+    ep.first = rand()%(WIDHT-1)+1;
+    ep.second = rand()%(HEIGHT-1)+1;
+    e_coord.push_back(ep);
+  }
   while(stop){
     mov_enemy();
-    sleep(2);
+    usleep(800000);
   }
   pthread_exit(NULL);
 }
@@ -262,8 +302,6 @@ void* enemy_thread(void* var){
 int main (void) {
   
   sem_init(&screen,0,1);
-
-
 
   //setlocale(LC_CTYPE,"C-UTF-8");
   setlocale (LC_ALL, "");
