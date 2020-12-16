@@ -1,2 +1,4 @@
 all:
-	g++ testthread.cpp -Wall -lpthread -g -lncursesw -o game
+	g++ testthread.cpp -Wall -lrt  -lpthread -g -lncursesw -o game
+run:
+	./game

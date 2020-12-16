@@ -26,6 +26,8 @@ int stop = 1;
 pair<int,int> p_coord;
 vector<pair<int,int>> e_coord;
 
+sem_t screen;
+
 void rand_dir(){
   int values[4] = {0};
   int aux = rand()%4;
@@ -120,8 +122,11 @@ void print_map(){
 }
 
 void mov_player(int dir) {
-  delete_dir(p_coord.second, p_coord.first);
-  mvaddch(p_coord.second, p_coord.first, ' '); //erase last position;
+  //delete_dir(p_coord.second, p_coord.first);
+  //mvaddch(p_coord.second, p_coord.first, ' '); //erase last position;
+
+  pair<int,int> past_coord;
+  past_coord.first = p_coord.first;past_coord.second=p_coord.second;
 
   if(dir == directions[0]){//DOWN
     if (p_coord.second > 1)
@@ -137,12 +142,21 @@ void mov_player(int dir) {
       p_coord.first++;
   }
 //☬◈☫
+
+  sem_wait(&screen);
+
+  delete_dir(past_coord.second, past_coord.first);
+  mvaddch(past_coord.second, past_coord.first, ' '); //erase last position;
+
   attron(COLOR_PAIR(PLAYER_COLOR));
   mvaddstr(p_coord.second, p_coord.first, "◈");
   attroff(COLOR_PAIR(PLAYER_COLOR));
   rand_dir();
   print_dir(p_coord.second, p_coord.first);
   refresh();
+
+  sem_post(&screen);
+
   return;
 }
 
@@ -171,6 +185,7 @@ void mov_enemy(){
 }
 
 void* player_thread(void* var){
+
   while(op == 0) {
     ch = getch();
 
@@ -205,11 +220,15 @@ void* player_thread(void* var){
 void* timer_thread(void* var){
   int sec=0, min=0;
   while(stop){
+    //bloco atomico
+    sem_wait(&screen);
     attron(COLOR_PAIR(TIMER_COLOR));
     move(0, 3);
     printw("TIME - %02d:%02d", min, sec);
     refresh();
     attroff(COLOR_PAIR(TIMER_COLOR));
+    sem_post(&screen);
+    //fim do bloco
     sec++;
     if(sec == 60){
       sec = 0;
@@ -232,6 +251,11 @@ void* enemy_thread(void* var){
 }
 
 int main (void) {
+  
+  sem_init(&screen,0,1);
+
+
+
   //setlocale(LC_CTYPE,"C-UTF-8");
   setlocale (LC_ALL, "");
   //RANDOM SEED
@@ -262,17 +286,21 @@ int main (void) {
 
   pthread_t timer;
   pthread_t player_t;
-  pthread_t enemy_t;
+  //pthread_t enemy_t;
   void *status_timer;
   void *status_player;
-  void *status_enemy;
+  //void *status_enemy;
+
+
 
   pthread_create(&timer, NULL, timer_thread, NULL);
   pthread_create(&player_t, NULL, player_thread, NULL);
-  pthread_create(&enemy_t, NULL, enemy_thread, NULL);
+  //pthread_create(&enemy_t, NULL, enemy_thread, NULL);
   pthread_join(timer, &status_timer);
-  pthread_join(enemy_t, &status_enemy);
+  //pthread_join(enemy_t, &status_enemy);
   pthread_join(player_t, &status_player);
+
+  sem_destroy(&screen);
 
   //pthread_exit(NULL);
   endwin();                  /* End curses mode    */
