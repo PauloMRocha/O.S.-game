@@ -26,330 +26,338 @@ int directions[4] = {0,1,2,3};
 int stop = 1;
 pair<int,int> p_coord;
 vector<pair<int,int>> e_coord;
+int points = 0;
 
 sem_t screen;
 
-void game_over(){
-  stop = 0;
-  clear();
-  printw("\n\n\n\n \t   GAME OVER");
-  refresh();
+bool game_over(){
+	char pressed_key;
+	clear();
+	move(0,0);
+	printw("\n\t GAME OVER\n\n");
+	printw("  PRESS ENTER TO RESTART\n");
+	printw("\n\tPOINTS: %d\n      TOTAL ENEMIES: %d", points*5, (int)e_coord.size());
+	printw("\n\n\tESC TO QUIT\n\n");
+	refresh();
+	pressed_key = getch();
+	
+	if (pressed_key == 13){
+		return true;
+	}
+
+	return false;
 }
 
 
 void rand_dir(){
-  int values[4] = {0};
-  int aux = rand()%4;
-  //the fist rand
-  values[aux] = 1;
-  directions[0] = aux;
-  //the two next
-  for(int i=1; i<3; i++){
-    while(values[aux] == 1){
-      aux = rand()%4;
-    }
-    values[aux] = 1;
-    directions[i] = aux;
-  }
-  //the last one
-  for(int i=0; i<4; i++){
-    if(values[i] == 0){
-      values[i] = 1;
-      directions[3] = i;
-    }
-  }
-  return;
+	int values[4] = {0};
+	int aux = rand()%4;
+	//the fist rand
+	values[aux] = 1;
+	directions[0] = aux;
+	//the two next
+	for(int i=1; i<3; i++){
+		while(values[aux] == 1){
+			aux = rand()%4;
+		}
+		values[aux] = 1;
+		directions[i] = aux;
+	}
+	//the last one
+	for(int i=0; i<4; i++){
+		if(values[i] == 0){
+			values[i] = 1;
+			directions[3] = i;
+		}
+	}
+	return;
 }
 
 void print_arrow(int x, int y, int dir){
-  if(dir == UP){
-    mvaddstr(x, y, "↑");
-  }else if(dir == DOWN){
-    mvaddstr(x, y, "↓");
-  }else if(dir == LEFT){
-    mvaddstr(x, y, "←");
-  }else{
-    mvaddstr(x, y, "→");
-  }
+	if(dir == UP){
+		mvaddstr(x, y, "↑");
+	}else if(dir == DOWN){
+		mvaddstr(x, y, "↓");
+	}else if(dir == LEFT){
+		mvaddstr(x, y, "←");
+	}else{
+		mvaddstr(x, y, "→");
+	}
 }
 
 void print_dir(int x, int y){
-  //up side
-  if((x-1) > 0){
-    print_arrow((x-1), y, directions[0]);
-  }
-  //down side
-  if((x+1) <= HEIGHT){
-    print_arrow((x+1), y, directions[1]);
-  }
-  //up left
-  if((y-1) > 0){
-    print_arrow(x, (y-1), directions[2]);
-  }
-  //down side
-  if((y+1) <= WIDHT){
-    print_arrow(x, (y+1), directions[3]);
-  }
+	//up side
+	if((x-1) > 0){
+		print_arrow((x-1), y, directions[0]);
+	}
+	//down side
+	if((x+1) <= HEIGHT){
+		print_arrow((x+1), y, directions[1]);
+	}
+	//up left
+	if((y-1) > 0){
+		print_arrow(x, (y-1), directions[2]);
+	}
+	//down side
+	if((y+1) <= WIDHT){
+		print_arrow(x, (y+1), directions[3]);
+	}
 }
 
 void delete_dir(int x, int y){
-  //up side
-  if((x-1) > 0){
-    mvaddch((x-1), y, ' ');
-  }
-  //down side
-  if((x+1) <= HEIGHT){
-    mvaddch((x+1), y, ' ');
-  }
-  //up left
-  if((y-1) > 0){
-    mvaddch(x, (y-1), ' ');
-  }
-  //down side
-  if((y+1) <= WIDHT){
-    mvaddch(x, (y+1), ' ');
-  }
+	//up side
+	if((x-1) > 0){
+		mvaddch((x-1), y, ' ');
+	}
+	//down side
+	if((x+1) <= HEIGHT){
+		mvaddch((x+1), y, ' ');
+	}
+	//up left
+	if((y-1) > 0){
+		mvaddch(x, (y-1), ' ');
+	}
+	//down side
+	if((y+1) <= WIDHT){
+		mvaddch(x, (y+1), ' ');
+	}
 }
 
 void print_map(){
-  clear();
-  move(0,0);
-  attron(COLOR_PAIR(WALL_COLOR));
-  for(int i = 0; i < WIDHT+2; i++) addch('#');
+	clear();
+	move(0,0);
+	attron(COLOR_PAIR(WALL_COLOR));
+	for(int i = 0; i < WIDHT+2; i++) addch('#');
 
-  for(int i = 1; i <= HEIGHT; i++){
-    mvaddch(i, 0, '#');
-    mvaddch(i, WIDHT+1, '#');
-  }
+	for(int i = 1; i <= HEIGHT; i++){
+		mvaddch(i, 0, '#');
+		mvaddch(i, WIDHT+1, '#');
+	}
 
-  move(HEIGHT+1, 0);
+	move(HEIGHT+1, 0);
 
-  for(int i = 0; i < WIDHT+2; i++) addch('#');
-  attroff(COLOR_PAIR(WALL_COLOR));
-  refresh();
-  return;
+	for(int i = 0; i < WIDHT+2; i++) addch('#');
+	attroff(COLOR_PAIR(WALL_COLOR));
+	refresh();
+	return;
 }
 
 void mov_player(int dir) {
 
-  pair<int,int> past_coord;
-  past_coord.first = p_coord.first;past_coord.second=p_coord.second;
+	pair<int,int> past_coord;
+	past_coord.first = p_coord.first;past_coord.second=p_coord.second;
 
-  if(dir == directions[0]){//DOWN
-    if (p_coord.second > 1)
-      p_coord.second--;
-  }else if(dir == directions[1]){//UP
-    if(p_coord.second < HEIGHT)
-      p_coord.second++;
-  }else if(dir == directions[2]){//LEFT
-    if(p_coord.first > 1)
-      p_coord.first--;
-  }else if(dir == directions[3]){//RIGHT
-    if(p_coord.first < WIDHT)
-      p_coord.first++;
-  }
+	if(dir == directions[0]){//DOWN
+		if (p_coord.second > 1)
+			p_coord.second--;
+	}else if(dir == directions[1]){//UP
+		if(p_coord.second < HEIGHT)
+			p_coord.second++;
+	}else if(dir == directions[2]){//LEFT
+		if(p_coord.first > 1)
+			p_coord.first--;
+	}else if(dir == directions[3]){//RIGHT
+		if(p_coord.first < WIDHT)
+			p_coord.first++;
+	}
 
-  for (int i = 0; i < (int)e_coord.size(); ++i){
-    if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
-      game_over();
-    }
-  }
-//☬◈☫
+	for (int i = 0; i < (int)e_coord.size(); ++i){
+		if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
+			stop = 1;
+		}
+	}
+	//☬◈☫
 
-  sem_wait(&screen);
+	sem_wait(&screen);
 
-  delete_dir(past_coord.second, past_coord.first);
-  mvaddch(past_coord.second, past_coord.first, ' '); //erase last position;
+	delete_dir(past_coord.second, past_coord.first);
+	mvaddch(past_coord.second, past_coord.first, ' '); //erase last position;
 
-  attron(COLOR_PAIR(PLAYER_COLOR));
-  mvaddstr(p_coord.second, p_coord.first, "◈");
-  attroff(COLOR_PAIR(PLAYER_COLOR));
-  rand_dir();
-  print_dir(p_coord.second, p_coord.first);
-  refresh();
+	attron(COLOR_PAIR(PLAYER_COLOR));
+	mvaddstr(p_coord.second, p_coord.first, "◈");
+	attroff(COLOR_PAIR(PLAYER_COLOR));
+	rand_dir();
+	print_dir(p_coord.second, p_coord.first);
+	refresh();
 
-  sem_post(&screen);
+	sem_post(&screen);
 
-  return;
+	return;
 }
 
 void mov_enemy(){
 
-  srand(time(NULL));
-  int dir_e = 0;
+	srand(time(NULL));
+	int dir_e = 0;
 
-  for (int i = 0; i < (int)e_coord.size(); ++i){
-    dir_e = rand()%2;
-    sem_wait(&screen);
-    mvaddch(e_coord[i].second, e_coord[i].first, ' '); //erase last position;
-    
-    if (dir_e==i){
-      if (p_coord.second < e_coord[i].second) {
-        e_coord[i].second--;
-      }else{
-        e_coord[i].second++;
-      }
-    }else{
-      if (p_coord.first < e_coord[i].first) {
-        e_coord[i].first--;
-      }else{
-        e_coord[i].first++;
-      }
-    }
+	for (int i = 0; i < (int)e_coord.size(); ++i){
+		dir_e = rand()%2;
+		sem_wait(&screen);
+		mvaddch(e_coord[i].second, e_coord[i].first, ' '); //erase last position;
 
-    attron(COLOR_PAIR(ENEMY_COLOR));
-    mvaddstr(e_coord[i].second, e_coord[i].first, "☫");
-    attroff(COLOR_PAIR(ENEMY_COLOR));
-    refresh();
+		if (dir_e==i){
+			if (p_coord.second < e_coord[i].second) {
+				e_coord[i].second--;
+			}else{
+				e_coord[i].second++;
+			}
+		}else{
+			if (p_coord.first < e_coord[i].first) {
+				e_coord[i].first--;
+			}else{
+				e_coord[i].first++;
+			}
+		}
 
-    sem_post(&screen);    
-  }
+		attron(COLOR_PAIR(ENEMY_COLOR));
+		mvaddstr(e_coord[i].second, e_coord[i].first, "☫");
+		attroff(COLOR_PAIR(ENEMY_COLOR));
+		refresh();
 
-  for (int i = 0; i < (int)e_coord.size(); ++i){
-    if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
-      game_over();
-    }
-  }
+		sem_post(&screen);    
+	}
 
-  /*
-  if(dir_e == 0){//DOWN
-    if (e_coord[0].second > 1)
-      e_coord[0].second--;
-    }else if(dir_e == 1){//UP
-     if(e_coord[0].second < HEIGHT)
-        e_coord[0].second++;
-   }else if(dir_e == 2){//LEFT
-     if(e_coord[0].first > 1)
-       e_coord[0].first--;
-   }else if(dir_e == 3){//RIGHT
-     if(e_coord[0].first < WIDHT)
-       e_coord[0].first++;
-  }if p(_coord.first  == e_coord[i].first&& p_coord.second == e_coord[i]
-.second){
-  game_over();
-}  */
+	for (int i = 0; i < (int)e_coord.size(); ++i){
+		if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
+			stop = 0;
+		}
+	}
+
 }
 
 void* player_thread(void* var){
 
-  while(op == 0 && stop != 0) {
-    ch = getch();
+	while(op == 0 && stop != 0) {
+		ch = getch();
 
-    switch(ch) {
-      case KEY_UP:
-        mov_player(UP);
-        break;
+		switch(ch) {
+			case KEY_UP:
+				mov_player(UP);
+				break;
 
-      case KEY_DOWN:
-        mov_player(DOWN);
-        break;
+			case KEY_DOWN:
+				mov_player(DOWN);
+				break;
 
-      case KEY_RIGHT:
-        mov_player(RIGHT);
-        break;
+			case KEY_RIGHT:
+				mov_player(RIGHT);
+				break;
 
-      case KEY_LEFT:
-        mov_player(LEFT);
-        break;
+			case KEY_LEFT:
+				mov_player(LEFT);
+				break;
 
-      case 27:
-        op = 1;
-        break;
-      default:
-      break;
-    }
-  }
-  stop = 0;
-  pthread_exit(NULL);
+			case 27:
+				op = 1;
+				break;
+			default:
+				break;
+		}
+	}
+	stop = 0;
+	pthread_exit(NULL);
 }
 
 void* timer_thread(void* var){
-  int sec=0, min=0;
-  while(stop){
-    //bloco atomico
-    sem_wait(&screen);
-    attron(COLOR_PAIR(TIMER_COLOR));
-    move(0, 3);
-    printw("TIME - %02d:%02d", min, sec);
-    refresh();
-    attroff(COLOR_PAIR(TIMER_COLOR));
-    sem_post(&screen);
-    //fim do bloco
-    sec++;
-    if(sec == 60){
-      sec = 0;
-      min++;
-    }
-    sleep(1);
-  }
-  pthread_exit(NULL);
+	int sec = 0, min = 0;
+	while(stop){
+		//bloco atomico
+		sem_wait(&screen);
+		attron(COLOR_PAIR(TIMER_COLOR));
+		move(0, 3);
+		printw("TIME - %02d:%02d", min, sec);
+		refresh();
+		attroff(COLOR_PAIR(TIMER_COLOR));
+		sem_post(&screen);
+		//fim do bloco
+		sec++;
+		points++;
+		if(sec == 60){
+			sec = 0;
+			min++;
+		}
+		sleep(1);
+	}
+	pthread_exit(NULL);
 }
 
 void* enemy_thread(void* var){
-  pair<int,int> ep;
-  for (int i=0; i < N_ENEMIES; ++i){
-    ep.first = rand()%(WIDHT-1)+1;
-    ep.second = rand()%(HEIGHT-1)+1;
-    e_coord.push_back(ep);
-  }
-  while(stop){
-    mov_enemy();
-    usleep(800000);
-  }
-  pthread_exit(NULL);
+	pair<int,int> ep;
+	for (int i=0; i < N_ENEMIES; ++i){
+		ep.first = rand()%(WIDHT-1)+1;
+		ep.second = rand()%(HEIGHT-1)+1;
+		e_coord.push_back(ep);
+	}
+	int cont = 0, velocidade = 1300000;
+	while(stop){
+		if(cont%15 == 0){
+			if (cont%30 == 0){
+				ep.first = rand()%(WIDHT-1)+1;
+				ep.second = rand()%(HEIGHT-1)+1;
+				e_coord.push_back(ep);
+			}else{
+				velocidade -= 100000;
+			}
+		}
+		mov_enemy();
+		usleep(velocidade);
+		cont++;
+	}pthread_exit(NULL);
 }
 
 int main (void) {
-  
-  sem_init(&screen,0,1);
 
-  //setlocale(LC_CTYPE,"C-UTF-8");
-  setlocale (LC_ALL, "");
-  //RANDOM SEED
-  srand(time(NULL));
+	sem_init(&screen,0,1);
 
-  initscr();   /* Start curses mode     */
-  //COLORS
-  start_color();
-  //        id            font color   bg color
-  init_pair(WALL_COLOR, COLOR_YELLOW, COLOR_YELLOW);//wall
-  init_pair(ENEMY_COLOR, COLOR_RED, COLOR_BLACK);
-  init_pair(PLAYER_COLOR, COLOR_GREEN, COLOR_BLACK);//player
-  init_pair(TIMER_COLOR, COLOR_WHITE, COLOR_BLACK);//timer
-  //stops buffer
-  cbreak();
-  printw("Press any key to start\n"); /* Print init message   */
-  refresh();
-  getch();
-  curs_set(0);
-  noecho();
+	//setlocale(LC_CTYPE,"C-UTF-8");
+	setlocale (LC_ALL, "");
+	//RANDOM SEED
+	srand(time(NULL));
 
-  p_coord.first = 15; p_coord.second = 7;
-  print_map();
-  mov_player(-1);
+	initscr();   /* Start curses mode     */
+	//COLORS
+	start_color();
+	//        id            font color   bg color
+	init_pair(WALL_COLOR, COLOR_YELLOW, COLOR_YELLOW);//wall
+	init_pair(ENEMY_COLOR, COLOR_RED, COLOR_BLACK);
+	init_pair(PLAYER_COLOR, COLOR_GREEN, COLOR_BLACK);//player
+	init_pair(TIMER_COLOR, COLOR_WHITE, COLOR_BLACK);//timer
+	//stops buffer
+	cbreak();
+	printw("Press any key to start\n"); /* Print init message   */
+	refresh();
+	getch();
+	curs_set(0);
+	noecho();
 
-  //activate key code
-  keypad(stdscr, TRUE);
+	//activate key code
+	keypad(stdscr, TRUE);
 
-  pthread_t timer;
-  pthread_t player_t;
-  pthread_t enemy_t;
-  void *status_timer;
-  void *status_player;
-  void *status_enemy;
+	pthread_t timer;
+	pthread_t player_t;
+	pthread_t enemy_t;
+	void *status_timer;
+	void *status_player;
+	void *status_enemy;
 
+	do{
+		p_coord.first = 15;
+		p_coord.second = 7;
+		e_coord.clear();
+		print_map();
+		mov_player(-1);
+		pthread_create(&timer, NULL, timer_thread, NULL);
+		pthread_create(&player_t, NULL, player_thread, NULL);
+		pthread_create(&enemy_t, NULL, enemy_thread, NULL);
+		pthread_join(timer, &status_timer);
+		pthread_join(enemy_t, &status_enemy);
+		pthread_join(player_t, &status_player);
+		
+		sem_destroy(&screen);
+		stop = 1;
+	}while(game_over());
 
-
-  pthread_create(&timer, NULL, timer_thread, NULL);
-  pthread_create(&player_t, NULL, player_thread, NULL);
-  pthread_create(&enemy_t, NULL, enemy_thread, NULL);
-  pthread_join(timer, &status_timer);
-  pthread_join(enemy_t, &status_enemy);
-  pthread_join(player_t, &status_player);
-
-  sem_destroy(&screen);
-
-  //pthread_exit(NULL);
-  endwin();                  /* End curses mode    */
-  return 0;
+	//pthread_exit(NULL);
+	endwin();                  /* End curses mode    */
+	return 0;
 }
