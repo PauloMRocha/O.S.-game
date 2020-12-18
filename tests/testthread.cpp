@@ -6,49 +6,54 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <bits/stdc++.h>
+// Map size
 #define WIDHT 30
 #define HEIGHT 15
+// Initial enemies
+#define N_ENEMIES 4
+// Directions
 #define UP 0
 #define DOWN 1
 #define LEFT 2
 #define RIGHT 3
+// Colors
 #define WALL_COLOR 1
 #define ENEMY_COLOR 2
 #define PLAYER_COLOR 3
 #define TIMER_COLOR 4
-#define N_ENEMIES 4
+#define INIT_COLOR 5
 
 using namespace std;
 
-// global
 int ch, op = 0;
 int directions[4] = {0,1,2,3};
-int stop = 1;
-pair<int,int> p_coord;
-vector<pair<int,int>> e_coord;
+int stop = 1;										// stops=0 para as threads
+pair<int,int> p_coord;					// Posicao do player
+vector<pair<int,int>> e_coord;	// Posicoes dos inimigos
 int points = 0;
 
 sem_t screen;
 
+// Printa a tela de game over
 bool game_over(){
 	char pressed_key;
 	clear();
 	move(0,0);
 	printw("\n\t GAME OVER\n\n");
 	printw("  PRESS ENTER TO RESTART\n");
-	printw("\n\tPOINTS: %d\n      TOTAL ENEMIES: %d", points*5, (int)e_coord.size());
+	printw("\n\tPOINTS: %d\n      TOTAL ENEMIES: %d", (points*(int)e_coord.size()), (int)e_coord.size());
 	printw("\n\n\tESC TO QUIT\n\n");
 	refresh();
 	pressed_key = getch();
-	
-	if (pressed_key == 13){
-		return true;
+
+	if (pressed_key == 27){
+		return false;
 	}
 
-	return false;
+	return true;
 }
 
-
+// Gera randomicamente as direçoes trocadas
 void rand_dir(){
 	int values[4] = {0};
 	int aux = rand()%4;
@@ -73,6 +78,7 @@ void rand_dir(){
 	return;
 }
 
+// Printa uma seta
 void print_arrow(int x, int y, int dir){
 	if(dir == UP){
 		mvaddstr(x, y, "↑");
@@ -85,25 +91,39 @@ void print_arrow(int x, int y, int dir){
 	}
 }
 
+// Printa as setas ao resdor do player
 void print_dir(int x, int y){
+	int flags[4] = {0};
+	for(int i=0; i<(int)e_coord.size(); i++){
+		if(e_coord[i].first == y){
+			if(e_coord[i].second == (x-1)) flags[0] = 1;
+			if(e_coord[i].second == (x+1)) flags[1] = 1;
+		}
+		if(e_coord[i].first == x){
+			if(e_coord[i].second == (y-1)) flags[2] = 1;
+			if(e_coord[i].second == (y+1)) flags[3] = 1;
+		}
+	}
+
 	//up side
-	if((x-1) > 0){
+	if((x-1) > 0 && flags[0] == 0){
 		print_arrow((x-1), y, directions[0]);
 	}
 	//down side
-	if((x+1) <= HEIGHT){
+	if((x+1) <= HEIGHT && flags[1] == 0){
 		print_arrow((x+1), y, directions[1]);
 	}
 	//up left
-	if((y-1) > 0){
+	if((y-1) > 0 && flags[2] == 0){
 		print_arrow(x, (y-1), directions[2]);
 	}
 	//down side
-	if((y+1) <= WIDHT){
+	if((y+1) <= WIDHT && flags[3] == 0){
 		print_arrow(x, (y+1), directions[3]);
 	}
 }
 
+// Deleta as setas ao redor do player
 void delete_dir(int x, int y){
 	//up side
 	if((x-1) > 0){
@@ -123,6 +143,7 @@ void delete_dir(int x, int y){
 	}
 }
 
+// Printa o mapa
 void print_map(){
 	clear();
 	move(0,0);
@@ -142,6 +163,7 @@ void print_map(){
 	return;
 }
 
+// Movimenta o jogador
 void mov_player(int dir) {
 
 	pair<int,int> past_coord;
@@ -163,7 +185,12 @@ void mov_player(int dir) {
 
 	for (int i = 0; i < (int)e_coord.size(); ++i){
 		if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
-			stop = 1;
+			stop = 0;
+			move(7,5);
+			printw("**YOU WERE INFECTED**");
+			move(8,2);
+			printw("press any key to play again");
+			refresh();
 		}
 	}
 	//☬◈☫
@@ -185,6 +212,7 @@ void mov_player(int dir) {
 	return;
 }
 
+// Movimenta os inimigos
 void mov_enemy(){
 
 	srand(time(NULL));
@@ -214,17 +242,27 @@ void mov_enemy(){
 		attroff(COLOR_PAIR(ENEMY_COLOR));
 		refresh();
 
-		sem_post(&screen);    
+		sem_post(&screen);
 	}
 
 	for (int i = 0; i < (int)e_coord.size(); ++i){
 		if (p_coord.first == e_coord[i].first && p_coord.second == e_coord[i].second){
 			stop = 0;
+			move(7,5);
+			printw("**YOU WERE INFECTED**");
+			move(8,2);
+			printw("press any key to play again");
+			refresh();
 		}
 	}
 
 }
 
+/*
+	Thread que controla o player
+	com base nos comandos vindos
+	do teclado
+*/
 void* player_thread(void* var){
 
 	while(op == 0 && stop != 0) {
@@ -258,6 +296,9 @@ void* player_thread(void* var){
 	pthread_exit(NULL);
 }
 
+/*
+	Thread que controla o timer
+*/
 void* timer_thread(void* var){
 	int sec = 0, min = 0;
 	while(stop){
@@ -281,20 +322,34 @@ void* timer_thread(void* var){
 	pthread_exit(NULL);
 }
 
+/*
+	Thread que controla o surgimento
+	de inimigos ao longo do tempo e
+	o aumento de velocidade deles
+*/
 void* enemy_thread(void* var){
 	pair<int,int> ep;
 	for (int i=0; i < N_ENEMIES; ++i){
 		ep.first = rand()%(WIDHT-1)+1;
 		ep.second = rand()%(HEIGHT-1)+1;
-		e_coord.push_back(ep);
+		if(ep.first == p_coord.first && ep.second == p_coord.second)
+			i--;
+		else
+			e_coord.push_back(ep);
 	}
-	int cont = 0, velocidade = 1300000;
+	int cont = 0, velocidade = 1300000, p_flag=1;
 	while(stop){
 		if(cont%15 == 0){
 			if (cont%30 == 0){
-				ep.first = rand()%(WIDHT-1)+1;
-				ep.second = rand()%(HEIGHT-1)+1;
-				e_coord.push_back(ep);
+				while(p_flag){
+					ep.first = rand()%(WIDHT-1)+1;
+					ep.second = rand()%(HEIGHT-1)+1;
+					if(ep.first != p_coord.first && ep.second != p_coord.second){
+						e_coord.push_back(ep);
+						p_flag = 0;
+					}
+				}
+				p_flag = 1;
 			}else{
 				velocidade -= 100000;
 			}
@@ -315,17 +370,29 @@ int main (void) {
 	srand(time(NULL));
 
 	initscr();   /* Start curses mode     */
-	//COLORS
+
+	//Colors
 	start_color();
 	//        id            font color   bg color
-	init_pair(WALL_COLOR, COLOR_YELLOW, COLOR_YELLOW);//wall
-	init_pair(ENEMY_COLOR, COLOR_RED, COLOR_BLACK);
-	init_pair(PLAYER_COLOR, COLOR_GREEN, COLOR_BLACK);//player
-	init_pair(TIMER_COLOR, COLOR_WHITE, COLOR_BLACK);//timer
-	//stops buffer
+	init_pair(WALL_COLOR, COLOR_YELLOW, COLOR_YELLOW);// Wall
+	init_pair(ENEMY_COLOR, COLOR_RED, COLOR_BLACK);		// Enemies
+	init_pair(PLAYER_COLOR, COLOR_GREEN, COLOR_BLACK);// Player
+	init_pair(TIMER_COLOR, COLOR_WHITE, COLOR_BLACK);	// Timer
+	init_pair(INIT_COLOR, COLOR_YELLOW, COLOR_BLACK);	// Message
+
+	// Stops buffer
 	cbreak();
-	printw("Press any key to start\n"); /* Print init message   */
+
+	// Mensagem inicial
+	attron(COLOR_PAIR(INIT_COLOR));
+	printw("           The real direction is what you see!\n");
+	printw("         Don't trust in what you previously know!\n");
+	printw(" Avoid the red enemies to make through the other side!\n\n");
+	printw("           Press any key to open the gates...\n"); /* Print init message   */
+	attroff(COLOR_PAIR(INIT_COLOR));
 	refresh();
+
+	// Espera pelo sinal de start
 	getch();
 	curs_set(0);
 	noecho();
@@ -333,6 +400,7 @@ int main (void) {
 	//activate key code
 	keypad(stdscr, TRUE);
 
+	// Variaveis de thread
 	pthread_t timer;
 	pthread_t player_t;
 	pthread_t enemy_t;
@@ -340,24 +408,27 @@ int main (void) {
 	void *status_player;
 	void *status_enemy;
 
+	// Loop do game
 	do{
+		// Inicializa o jogo
 		p_coord.first = 15;
 		p_coord.second = 7;
 		e_coord.clear();
 		print_map();
 		mov_player(-1);
+		// Inicializa as threads
 		pthread_create(&timer, NULL, timer_thread, NULL);
 		pthread_create(&player_t, NULL, player_thread, NULL);
 		pthread_create(&enemy_t, NULL, enemy_thread, NULL);
 		pthread_join(timer, &status_timer);
 		pthread_join(enemy_t, &status_enemy);
 		pthread_join(player_t, &status_player);
-		
-		sem_destroy(&screen);
+
 		stop = 1;
 	}while(game_over());
 
-	//pthread_exit(NULL);
-	endwin();                  /* End curses mode    */
+	endwin();   					//End curses mode
+	sem_destroy(&screen); // Finaliza o semaforo
+	pthread_exit(NULL);		// Finaliza as threads
 	return 0;
 }
